@@ -1,0 +1,272 @@
+import static org.gradle.api.file.DuplicatesStrategy.EXCLUDE
+import proguard.gradle.ProGuardTask  // Import proguard task from the classpath.
+
+buildscript {
+    repositories {
+        // These repositories are only for Gradle plugins, put any other repositories in the repository block further below
+        maven { url = 'https://maven.minecraftforge.net' }
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
+        classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT'
+
+        // 7.2.0 is latest to support Java 17./
+        // We only need the task, not the automatic things because these won't work, so only classpath will be used, and not apply.
+        classpath 'com.guardsquare:proguard-gradle:7.2.0'
+    }
+}
+
+apply plugin: 'net.minecraftforge.gradle'
+apply plugin: 'org.spongepowered.mixin'
+// Don't use apply for proguard, because that will break the script.
+
+group = 'com.example'
+version = '1.0.0'
+
+java {
+    archivesBaseName = 'mod-obf'
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
+}
+
+minecraft {
+    // The mappings can be changed at any time and must be in the following format.
+    // Channel:   Version:
+    // snapshot   YYYYMMDD   Snapshot are built nightly.
+    // stable     #          Stables are built at the discretion of the MCP team.
+    // official   MCVersion  Official field/method names from Mojang mapping files
+    //
+    // You must be aware of the Mojang license when using the 'official' mappings.
+    // See more information here: https://github.com/MinecraftForge/MCPConfig/blob/master/Mojang.md
+    //
+    // Use non-default mappings at your own risk. They may not always work.
+    // Simply re-run your setup task after changing the mappings to update your workspace.
+    mappings channel: 'official', version: '1.18.1'
+
+    // accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+
+    // Default run configurations.
+    // These can be tweaked, removed, or duplicated as needed.
+    runs {
+        client {
+            //noinspection GroovyAssignabilityCheck
+            workingDirectory project.file('runClient')
+
+            // Recommended logging data for a user dev environment
+            // The markers can be added/removed as needed separated by commas.
+            // "SCAN": For mods scan.
+            // "REGISTRIES": For firing of registry events.
+            // "REGISTRYDUMP": For getting the contents of all registries.
+            property 'forge.logging.markers', 'REGISTRIES'
+
+            // Recommended logging level for the console
+            // You can set various levels here.
+            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
+            property 'forge.logging.console.level', 'debug'
+
+            mods {
+                obfuscatedmod {
+                    //noinspection GroovyAssignabilityCheck
+                    source sourceSets.main
+                }
+            }
+        }
+
+        server {
+            //noinspection GroovyAssignabilityCheck
+            workingDirectory project.file('runServer')
+
+            // Recommended logging data for a user dev environment
+            // The markers can be added/removed as needed separated by commas.
+            // "SCAN": For mods scan.
+            // "REGISTRIES": For firing of registry events.
+            // "REGISTRYDUMP": For getting the contents of all registries.
+            property 'forge.logging.markers', 'REGISTRIES'
+
+            // Recommended logging level for the console
+            // You can set various levels here.
+            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
+            property 'forge.logging.console.level', 'debug'
+
+            mods {
+                obfuscatedmod {
+                    //noinspection GroovyAssignabilityCheck
+                    source sourceSets.main
+                }
+            }
+        }
+
+        data {
+            //noinspection GroovyAssignabilityCheck
+            workingDirectory project.file('runData')
+
+            // Recommended logging data for a user dev environment
+            // The markers can be added/removed as needed separated by commas.
+            // "SCAN": For mods scan.
+            // "REGISTRIES": For firing of registry events.
+            // "REGISTRYDUMP": For getting the contents of all registries.
+            property 'forge.logging.markers', 'REGISTRIES'
+
+            // Recommended logging level for the console
+            // You can set various levels here.
+            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
+            property 'forge.logging.console.level', 'debug'
+
+            // Specify the mod id for data generation, where to output the resulting resource, and where to look for existing resources.
+            args '--mod', 'obfuscatedmod', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+
+            mods {
+                obfuscatedmod {
+                    //noinspection GroovyAssignabilityCheck
+                    source sourceSets.main
+                }
+            }
+        }
+    }
+}
+
+mixin {
+    add sourceSets.main, "mod-obf.refmap.json"
+
+    config "mod-obf.mixins.json"
+}
+
+// Include resources generated by data generators.
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+repositories {
+    // Put repositories for dependencies here
+    // ForgeGradle automatically adds the Forge maven and Maven Central for you
+
+    // If you have mod jar dependencies in ./libs, you can declare them as a repository like so:
+    // flatDir {
+    //     dir 'libs'
+    // }
+}
+
+configurations {
+    implementation {
+        canBeResolved true
+    }
+    minecraft {
+        canBeResolved true
+    }
+    runtimeOnly {
+        canBeResolved true
+    }
+    runtimeClasspath {
+        canBeResolved true
+    }
+    include {
+        canBeResolved true
+    }
+}
+
+dependencies {
+    // Specify the version of Minecraft to use. If this is any group other than 'net.minecraft' it is assumed
+    // that the dep is a ForgeGradle 'patcher' dependency, and its patches will be applied.
+    // The user dev artifact is a special name and will get all sorts of transformations applied to it.
+    minecraft 'net.minecraftforge:forge:1.18.1-39.0.66'
+
+    // Real mod deobf dependency examples - these get remapped to your current mappings
+    // compileOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}:api") // Adds JEI API as a compile dependency
+    // runtimeOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}") // Adds the full JEI mod as a runtime dependency
+    // implementation fg.deobf("com.tterrag.registrate:Registrate:MC${mc_version}-${registrate_version}") // Adds registrate as a dependency
+
+    // Examples using mod jars from ./libs
+    // implementation fg.deobf("blank:coolmod-${mc_version}:${coolmod_version}")
+
+    // For more info...
+    // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
+    // http://www.gradle.org/docs/current/userguide/dependency_management.html
+
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+}
+
+// Example for how to get properties into the manifest for reading at runtime.
+jar {
+    //noinspection GroovyAssignabilityCheck
+    manifest {
+        attributes([
+                "Specification-Title"     : "obfuscatedmod",
+                "Specification-Vendor"    : "Everyone",
+                "Specification-Version"   : "1", // We are version 1 of ourselves
+                "Implementation-Title"    : project.name,
+                "Implementation-Version"  : project.jar.archiveVersion,
+                "Implementation-Vendor"   : "Everyone",
+                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+}
+
+task nonObfJar(type: Jar) {
+    dependsOn jar
+    finalizedBy reobf
+    classifier 'nonobf'
+    from zipTree((jar as Jar).archiveFile)
+    //noinspection GroovyAssignabilityCheck
+    manifest {
+        attributes([
+                "Specification-Title"     : "Qboi SMP: Vertinox",
+                "Specification-Vendor"    : "Qboi SMP Team",
+                "Specification-Version"   : "2", // We are version 1 of ourselves
+                "Implementation-Title"    : project.name,
+                "Implementation-Version"  : project.version,
+                "Implementation-Vendor"   : "Qboi SMP Team",
+                "MixinConfigs"            : "vertinox.mixins.json",
+                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+    duplicatesStrategy EXCLUDE
+}
+
+repositories {
+    mavenCentral()
+}
+
+jar.finalizedBy('reobfJar')
+
+def dependsDir = file("${projectDir}/dependencies")
+
+/**
+ * Copied dependencies to dependencies directory.
+ * Which is finally being used for proguard to understand where the references are going from.
+ */
+task copyDepends(type: Copy) {
+    from configurations.default
+    from configurations.implementation
+    from configurations.minecraft
+    from fileTree("libs/")
+    from fileTree("java-libs/")
+    into "${dependsDir}"
+
+    duplicatesStrategy EXCLUDE // Excluded because these are just jar files.
+}
+
+/**
+ * Obfuscation task.
+ */
+task useProGuard(type: ProGuardTask) {
+    dependsOn jar
+    dependsOn nonObfJar
+    dependsOn copyDepends
+    finalizedBy 'reobfJar'
+    finalizedBy 'reobfNonObfJar'
+    configuration 'proguard-rules.pro'  // Proguard configuration.
+    injars nonObfJar.archiveFile.get().asFile.path  // Input is the non-obfuscated jar file.
+    outjars "${jar.archiveFile.get().asFile.path}"  // Output jar file is the same as the normal jar.
+    libraryjars fileTree("${dependsDir}")  // Required libraries.
+    printmapping "build/libs/${jar.archiveBaseName.get()}-${jar.archiveVersion.get()}-obfed.jar.maps"  // Writes mappings next to it, handy for understanding crash reports.
+    dontshrink()  // Required to make mod loading work.
+    dontoptimize()  // Required to make mod loading work.
+}
+
+reobf {
+    nonObfJar {
+
+    }
+    jar {
+
+    }
+}

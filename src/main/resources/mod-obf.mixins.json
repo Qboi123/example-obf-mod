@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.example.modobf.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "modobf.refmap.json",
+  "mixins": [
+    "ExampleMixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
